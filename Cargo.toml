@@ -1,0 +1,11 @@
+[package]
+name = "sifli_sdk_wrapper"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "sdk_py"
+path = "src/main.rs"
+
+[dependencies]
+ctrlc = "3.4.5"
