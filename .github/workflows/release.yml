@@ -1,0 +1,80 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - '*'
+  pull_request:
+
+jobs:
+  build-check:
+    name: Build Check
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build Project
+        run: cargo build --release
+
+  release:
+    name: Build and Create Release
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Build Project
+        run: cargo build --release
+
+      - name: Rename Executable
+        run: |
+          if (Test-Path "target\release\sdk_py.exe") {
+            Rename-Item "target\release\sdk_py.exe" "target\release\sdk.py.exe"
+          } else {
+            Write-Error "Executable not found!"
+          }
+        shell: pwsh
+
+      - name: Create Zip Archive
+        run: |
+          # Use the GitHub ref name (without the "refs/tags/" prefix) as the version.
+          Compress-Archive -Path "target\release\sdk.py.exe" -DestinationPath "sdk-py-v${env:GITHUB_REF_NAME}.zip"
+        shell: pwsh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Generate SHA256 Checksum
+        run: |
+          $hash = Get-FileHash -Algorithm SHA256 -Path "sdk-py-v${env:GITHUB_REF_NAME}.zip" | Select-Object -ExpandProperty Hash
+          $hash | Out-File -Encoding ASCII "sdk-py-v${env:GITHUB_REF_NAME}.zip.sha256"
+        shell: pwsh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+
+      - name: Create Release and Upload Assets
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          body: "Automated release of sdk.py."
+          artifacts: |
+            sdk-py-v${{ github.ref_name }}.zip
+            sdk-py-v${{ github.ref_name }}.zip.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
