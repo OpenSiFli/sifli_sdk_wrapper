@@ -75,7 +75,7 @@ After setting up the environment, you can run the wrapper from the command line:
 
 ## License
 
-This project is licensed under the Apache-2.0. Replace this text with the actual license if applicable.
+This project is licensed under the Apache-2.0.
 
 ## Contributing
 
